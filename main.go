@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"container/list"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,6 +26,36 @@ const kChangeId = kMessagePrefix + "Change-Id: "
 
 const filenameGerritCherryIgnore = ".gerrit-cherry-ignore"
 
+
+// CheckArgs should be used to ensure the right command line arguments are
+// passed before executing an example.
+func CheckArgs(arg ...string) {
+	if len(os.Args) < len(arg)+1 {
+		Warning("Usage: %s %s", os.Args[0], strings.Join(arg, " "))
+		os.Exit(1)
+	}
+}
+
+// CheckIfError should be used to naively panics if an error is not nil.
+func CheckIfError(err error) {
+	if err == nil {
+		return
+	}
+
+	fmt.Printf("\x1b[31;1m%s\x1b[0m\n", fmt.Sprintf("error: %s", err))
+	os.Exit(1)
+}
+
+// Info should be used to describe the example commands that are about to run.
+func Info(format string, args ...interface{}) {
+	fmt.Printf("\x1b[34;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
+}
+
+// Warning should be used to display a warning
+func Warning(format string, args ...interface{}) {
+	fmt.Printf("\x1b[36;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
+}
+
 func GerritCommits(commitName string) (map[string]*Commit, *list.List, error) {
 	// change-Id -> commit object
 	var m map[string]*Commit = make(map[string]*Commit)
@@ -35,12 +64,10 @@ func GerritCommits(commitName string) (map[string]*Commit, *list.List, error) {
 
 	cmd := exec.Command("git", "log", "--decorate=short", commitName)
 	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
+	CheckIfError(err)
+
+	err = cmd.Start()
+	CheckIfError(err)
 
 	var commit *Commit
 	scanner := bufio.NewScanner(stdout)
@@ -71,25 +98,21 @@ func PrintCommit(c *Commit) {
 }
 
 func main() {
+	CheckArgs("<commit>")
 	commit := os.Args[1]
 
 	// read HEAD
 	mapHEAD, _, err := GerritCommits("HEAD")
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckIfError(err)
 
 	// read other
 	mapOther, listOther, err := GerritCommits(commit)
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckIfError(err)
 
 	// open .gerrit-cherry-ignore for explicit skipped Change-Ids
 	pwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
+	CheckIfError(err)
+
 	dir, err := filepath.Abs(pwd)
 	for {
 		filename := dir + string(os.PathSeparator) + filenameGerritCherryIgnore
