@@ -56,11 +56,16 @@ func Warning(format string, args ...interface{}) {
 	fmt.Printf("\x1b[36;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
 }
 
-func GerritCommits(commitName string) (map[string]*Commit, *list.List, error) {
+// Return map and ordered list of gerrit commits in branch
+// m - change-Id -> commit object
+// l - ordered changeId
+func GerritCommits(commitName string) (m map[string]*Commit, l *list.List, err error) {
 	// change-Id -> commit object
-	var m map[string]*Commit = make(map[string]*Commit)
+	m = make(map[string]*Commit)
 	// ordered changeId
-	var l *list.List = list.New()
+	l = list.New()
+	// no error
+	err = nil
 
 	cmd := exec.Command("git", "log", "--decorate=short", commitName)
 	stdout, err := cmd.StdoutPipe()
@@ -90,7 +95,7 @@ func GerritCommits(commitName string) (map[string]*Commit, *list.List, error) {
 		}
 	}
 
-	return m, l, nil
+	return
 }
 
 func PrintCommit(c *Commit) {
